@@ -23,7 +23,7 @@ def facebook_logged_in(blueprint, token):
     if not resp.ok:
         msg = "Failed to fetch user info."
         flash(msg, category="error")
-        return False
+        return False    
 
     info = resp.json()
     user_id = info["id"]
