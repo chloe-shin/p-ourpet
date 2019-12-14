@@ -84,9 +84,11 @@ class Booking(db.Model):
 
     def render(self):
         return {
-            "booking_id": self.id,
+            "id": self.id,
             "user_id": self.user.id,
             "sitter_id" : self.sitter.id,
+            "sitter_pic": self.sitter.picture,
+            "sitter_name":self.sitter.user.name,
             "start" : self.start,
             "finish" : self.finish,
             "price" : self.price,

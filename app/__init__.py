@@ -11,6 +11,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import dateutil.parser
 import datetime
+import stripe
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -167,3 +169,63 @@ def contact_sitter(id):
         }
         print(res)
         return jsonify(res)
+
+
+#api to call all booking information
+@app.route('/bookings')
+@login_required
+def bookings():
+    bookings = Booking.query.filter_by(user_id = current_user.id)
+    res = {
+        "success": True,
+        "bookings": [booking.render() for booking in bookings]
+    } 
+    return jsonify(res)
+
+@app.route('/bookings/<id>/detail')
+def getBookingDetail(id):
+    booking= Booking.query.get(id)
+    res = {
+        "booking": booking.render()
+    }
+    return jsonify(res)
+
+@app.route('/bookings/<id>/detail/delete')
+@login_required
+def deleteBooking(id):
+
+    booking= Booking.query.get(id)
+    db.session.delete(booking)
+    db.session.commit()
+    
+    bookings = Booking.query.filter_by(user_id = current_user.id)
+    res = {
+        "success": True,
+        "bookings": [booking.render() for booking in bookings]
+    } 
+    return jsonify(res)
+
+#stripe
+# @app.route('/bookings/<id>/checkout')
+# def payment(id):
+#     booking= Booking.query.get(id)
+#     res = {
+#         "key": os.environ.get['STRIPE_PUBLISHABLE_KEY']
+#     }
+#     return jsonify(res)
+
+# @app.route('/bookings/checkout')
+# def payment():
+#     res = {
+#         "key": os.environ.get('STRIPE_PUBLISHABLE_KEY')
+#     }
+#     return jsonify(res)
+
+# @app.route('/bookings/checkout')
+# def payment():
+#     stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+
+# static_dir = str(os.path.abspath(os.path.join(
+#     __file__, "..", os.getenv("STATIC_DIR"))))
+# app = Flask(__name__, static_folder=static_dir,
+#             static_url_path="", template_folder=static_dir)
