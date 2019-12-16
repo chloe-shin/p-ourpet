@@ -94,6 +94,7 @@ class Booking(db.Model):
             "sitter_id" : self.sitter.id,
             "sitter_pic": self.sitter.picture,
             "sitter_name":self.sitter.user.name,
+            "sitter_city": self.sitter.city,
             "start" : self.start,
             "finish" : self.finish,
             "price" : self.price,
@@ -108,11 +109,16 @@ class Booking(db.Model):
             "pet_age": self.pet_age,
             "pet_sex": self.pet_sex,
             "is_photo": self.is_photo,
-            "is_paid":self.is_paid
+            "is_paid":self.is_paid,
+            "days": self.days()
         }
+
     def total(self):
         days = (self.finish - self.start).days
         return days*self.price
+    
+    def days(self):
+        return (self.finish -self.start).days
          
 # setup login manager
 login_manager = LoginManager()
