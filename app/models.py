@@ -16,7 +16,7 @@ class User(UserMixin, db.Model):
     phone_number = db.Column(db.String)
     sitter = db.relationship('Sitter', backref='user', uselist=False)
     booking = db.relationship('Booking', backref='user')
-
+    
     # password: 지금 입력한 비밀번호 #self.password: 사용자 비밀번호
     def generate_password(self, password):
         self.password = generate_password_hash(password)  # password를 암호화
@@ -26,7 +26,9 @@ class User(UserMixin, db.Model):
     def render(self):
         return {
             "name": self.name,
-            "email": self.email
+            "email": self.email,
+            "is_sitter": self.is_sitter,
+            "phont_number":self.phone_number
         }
 
 class OAuth(OAuthConsumerMixin, db.Model):
@@ -72,8 +74,7 @@ class Booking(db.Model):
     price = db.Column(db.Integer)
     created_at = db.Column(db.DateTime)
     message = db.Column(db.String)
-    is_confirmed= db.Column(db.Boolean, default= False)
-    total_price = db.Column(db.Integer)
+    is_confirmed= db.Column(db.Boolean, default=None)
     pet_type= db.Column(db.String)
     pet_size= db.Column(db.String)
     pet_name= db.Column(db.String)
@@ -81,10 +82,14 @@ class Booking(db.Model):
     pet_age= db.Column(db.String)
     pet_sex= db.Column(db.String)
     is_photo= db.Column(db.Boolean, default= False)
+    is_paid= db.Column(db.Boolean, default=False)
+    stripe_token=db.Column(db.String, unique=True)
+    address=db.Column(db.String)
 
     def render(self):
         return {
             "id": self.id,
+            "user_name": self.user.name,
             "user_id": self.user.id,
             "sitter_id" : self.sitter.id,
             "sitter_pic": self.sitter.picture,
@@ -95,21 +100,19 @@ class Booking(db.Model):
             "message": self.message,
             "created_at": self.created_at,
             "is_confirmed": self.is_confirmed,
-            "total_price": self.total_price,
+            "total_price": self.total(),
             "pet_type": self.pet_type,
             "pet_size": self.pet_size,
             "pet_name": self.pet_name,
             "pet_breed": self.pet_breed,
             "pet_age": self.pet_age,
             "pet_sex": self.pet_sex,
-            "is_photo": self.is_photo
+            "is_photo": self.is_photo,
+            "is_paid":self.is_paid
         }
-    # def total(self):
-        # Step 1: Find how many days
-        
-        # Step 2: Multiply days * price
-
-        # Step 3: Return that answer 
+    def total(self):
+        days = (self.finish - self.start).days
+        return days*self.price
          
 # setup login manager
 login_manager = LoginManager()

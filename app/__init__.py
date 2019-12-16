@@ -11,8 +11,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import dateutil.parser
 import datetime
-import stripe
-import json
 
 app = Flask(__name__)
 CORS(app)
@@ -42,7 +40,12 @@ def logout():
 @app.route('/getuser', methods=['GET'])
 @login_required
 def getuser():
-    return jsonify(user_id=current_user.id, name=current_user.name)
+    return jsonify(
+        user_id=current_user.id, 
+        name=current_user.name,
+        email=current_user.email,
+        is_sitter=current_user.is_sitter,
+        phone_number=current_user.phone_number)
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -82,9 +85,13 @@ def login():
         print(resp)
         return resp        
 
-@app.route('/sitter-list', methods=['GET', 'POST'])
-def sitter():
-    sitters = Sitter.query.all()
+@app.route('/sitter-list/<city>', methods=['GET', 'POST'])
+def sitter(city):
+    if city == "undefined":
+        city = ""
+    city = "%{}%".format(city)
+    sitters = Sitter.query.filter(Sitter.city.ilike(city)).all()
+    print(sitters)
     res = {
         "success": True,
         "sitters": [ sitter.render() for sitter in sitters]
@@ -151,7 +158,7 @@ def contact_sitter(id):
             price=data['price'],
             message=data['message'],
             created_at= datetime.datetime.now(),
-            is_confirmed = False,
+            is_confirmed = None,
             pet_type= data['pet_type'],
             pet_size= data['pet_size'],
             pet_name= data['pet_name'],
@@ -205,6 +212,41 @@ def deleteBooking(id):
     } 
     return jsonify(res)
 
+@app.route('/bookings-for-sitter')
+@login_required
+def bookingsForSitter():
+    sitter = Sitter.query.filter_by(user_id = current_user.id).first()
+    bookings = Booking.query.filter_by(sitter_id = sitter.id)
+    res = {
+        "success": True,
+        "bookings": [booking.render() for booking in bookings]
+    } 
+    return jsonify(res)
+
+
+@app.route('/booking/<id>/confirm', methods=['POST'])
+def confirm_booking(id):
+    if request.method == "POST":
+        booking = Booking.query.filter_by(id=id).first()
+        booking.is_confirmed = True
+       
+        db.session.add(booking)
+        db.session.commit()
+
+        return jsonify(booking.render())
+
+@app.route('/booking/<id>/reject', methods=['POST'])
+def reject_booking(id):
+    if request.method == "POST":
+        booking = Booking.query.filter_by(id=id).first()
+        booking.is_confirmed = False
+        
+        db.session.add(booking)
+        db.session.commit()
+        
+        return jsonify(booking.render())
+
+
 #stripe
 # @app.route('/bookings/<id>/checkout')
 # def payment(id):
@@ -214,18 +256,19 @@ def deleteBooking(id):
 #     }
 #     return jsonify(res)
 
-# @app.route('/bookings/checkout')
-# def payment():
-#     res = {
-#         "key": os.environ.get('STRIPE_PUBLISHABLE_KEY')
-#     }
-#     return jsonify(res)
+@app.route('/bookings/<id>/checkout', methods=['POST'])
+@login_required
+def payment(id):
 
-# @app.route('/bookings/checkout')
-# def payment():
-#     stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-
-# static_dir = str(os.path.abspath(os.path.join(
-#     __file__, "..", os.getenv("STATIC_DIR"))))
-# app = Flask(__name__, static_folder=static_dir,
-#             static_url_path="", template_folder=static_dir)
+    booking= Booking.query.get(id)
+    if request.method == "POST":
+        data = request.get_json()
+        print(data)
+        booking.stripe_token = data['id']
+        booking.is_paid=True
+        db.session.commit()
+        res = {
+              "success": True,
+              "booking": booking.render()
+          } 
+        return jsonify(res)
