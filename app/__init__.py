@@ -87,7 +87,7 @@ def login():
 
 @app.route('/sitter-list/<city>', methods=['GET', 'POST'])
 def sitter(city):
-    if city == "undefined":
+    if city == "undefined": 
         city = ""
     city = "%{}%".format(city)
     sitters = Sitter.query.filter(Sitter.city.ilike(city)).all()
